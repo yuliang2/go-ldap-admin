@@ -193,11 +193,12 @@ func (d DingTalkLogic) AddUsers(user *model.User) error {
 	user.Roles = roles
 	user.Creator = "system"
 	user.Source = config.Conf.DingTalk.Flag
-	user.Password = config.Conf.Ldap.UserInitPassword
+	user.Password = getUserInitPassword()
 	user.UserDN = fmt.Sprintf("uid=%s,%s", user.Username, config.Conf.Ldap.UserDN)
 
 	// 根据 user_dn 查询用户,不存在则创建
 	if !isql.User.Exist(tools.H{"user_dn": user.UserDN}) {
+		user.Mobile = d.resolveSyncMobile(user.Mobile, 0)
 		// 获取用户将要添加的分组
 		groups, err := isql.Group.GetGroupByIds(tools.StringToSlice(user.DepartmentId, ","))
 		if err != nil {
@@ -267,10 +268,24 @@ func (d DingTalkLogic) AddUsers(user *model.User) error {
 			if user.Mobile == "" {
 				user.Mobile = oldData.Mobile
 			}
+			user.Mobile = d.resolveSyncMobile(user.Mobile, oldData.ID)
 			if err = CommonUpdateUser(oldData, user, tools.StringToSlice(user.DepartmentId, ",")); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+func (d DingTalkLogic) resolveSyncMobile(mobile string, excludeUserID uint) string {
+	mobile = strings.TrimSpace(mobile)
+	if mobile == "" {
+		return generateMobile()
+	}
+	existUser := new(model.User)
+	if err := isql.User.Find(tools.H{"mobile": mobile}, existUser); err == nil && existUser.ID != excludeUserID {
+		common.Log.Warnf("钉钉同步用户手机号重复，使用系统生成手机号替代: mobile=%s, conflictUserId=%d", mobile, existUser.ID)
+		return generateMobile()
+	}
+	return mobile
 }

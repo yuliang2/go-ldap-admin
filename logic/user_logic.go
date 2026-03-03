@@ -52,7 +52,7 @@ func (l UserLogic) Add(c *gin.Context, req any) (data any, rspError any) {
 			return nil, tools.NewValidatorError(fmt.Errorf("密码长度至少为6位"))
 		}
 	} else {
-		r.Password = config.Conf.Ldap.UserInitPassword
+		r.Password = getUserInitPassword()
 	}
 
 	// 当前登陆用户角色排序最小值（最高等级角色）以及当前登陆的用户

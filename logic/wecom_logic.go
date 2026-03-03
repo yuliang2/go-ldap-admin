@@ -198,7 +198,7 @@ func (d WeComLogic) AddUsers(user *model.User) error {
 	}
 	user.Creator = "system"
 	user.Roles = roles
-	user.Password = config.Conf.Ldap.UserInitPassword
+	user.Password = getUserInitPassword()
 	user.Source = config.Conf.WeCom.Flag
 	user.UserDN = fmt.Sprintf("uid=%s,%s", user.Username, config.Conf.Ldap.UserDN)
 

@@ -44,6 +44,8 @@ func InitConfig() {
 	if err != nil {
 		panic(fmt.Errorf("读取应用目录失败:%s", err))
 	}
+	viper.SetDefault("ldap.user-init-password-random", true)
+	viper.SetDefault("ldap.sync-user-send-mail", true)
 	viper.SetConfigName("config")
 	viper.SetConfigType("yml")
 	viper.AddConfigPath(workDir + "/")
@@ -124,6 +126,18 @@ func InitConfig() {
 
 		Conf.Ldap.UserInitPassword = ldapUserInitPassword
 	}
+	ldapUserInitPasswordRandom := os.Getenv("LDAP_USER_INIT_PASSWORD_RANDOM")
+	if ldapUserInitPasswordRandom != "" {
+		if v, err := strconv.ParseBool(ldapUserInitPasswordRandom); err == nil {
+			Conf.Ldap.UserInitPasswordRandom = v
+		}
+	}
+	ldapSyncUserSendMail := os.Getenv("LDAP_SYNC_USER_SEND_MAIL")
+	if ldapSyncUserSendMail != "" {
+		if v, err := strconv.ParseBool(ldapSyncUserSendMail); err == nil {
+			Conf.Ldap.SyncUserSendMail = v
+		}
+	}
 	ldapDefaultEmailSuffix := os.Getenv("LDAP_DEFAULT_EMAIL_SUFFIX")
 	if ldapDefaultEmailSuffix != "" {
 		Conf.Ldap.DefaultEmailSuffix = ldapDefaultEmailSuffix
@@ -194,10 +208,12 @@ type LdapConfig struct {
 	AdminPass                  string `mapstructure:"admin-pass" json:"adminPass"`
 	UserDN                     string `mapstructure:"user-dn" json:"userDN"`
 	UserInitPassword           string `mapstructure:"user-init-password" json:"userInitPassword"`
+	UserInitPasswordRandom     bool   `mapstructure:"user-init-password-random" json:"userInitPasswordRandom"`
 	GroupNameModify            bool   `mapstructure:"group-name-modify" json:"groupNameModify"`
 	UserNameModify             bool   `mapstructure:"user-name-modify" json:"userNameModify"`
 	DefaultEmailSuffix         string `mapstructure:"default-email-suffix" json:"defaultEmailSuffix"`
 	UserPasswordEncryptionType string `mapstructure:"user-password-encryption-type" json:"userPasswordEncryptionType"`
+	SyncUserSendMail           bool   `mapstructure:"sync-user-send-mail" json:"syncUserSendMail"`
 	EnableSync                 bool   `mapstructure:"enable-sync" json:"enableSync"`
 }
 type EmailConfig struct {

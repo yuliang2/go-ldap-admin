@@ -3,6 +3,7 @@ package logic
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 
 	"github.com/eryajf/go-ldap-admin/config"
 	"github.com/eryajf/go-ldap-admin/model"
@@ -125,8 +126,10 @@ func CommonAddUser(user *model.User, groups []*model.Group) error {
 	}
 
 	// 发送用户创建成功通知邮件
-	if err := tools.SendUserCreationNotification(user.Username, user.Nickname, user.Mail, tools.NewParPasswd(user.Password)); err != nil {
-		common.Log.Warnf("发送用户创建通知邮件失败，用户: %s, 邮箱: %s, 错误: %v", user.Username, user.Mail, err)
+	if shouldSendUserCreationNotification(user) {
+		if err := tools.SendUserCreationNotification(user.Username, user.Nickname, user.Mail, tools.NewParPasswd(user.Password)); err != nil {
+			common.Log.Warnf("发送用户创建通知邮件失败，用户: %s, 邮箱: %s, 错误: %v", user.Username, user.Mail, err)
+		}
 	}
 	// 再将用户添加到ldap
 	err = ildap.User.Add(user)
@@ -426,4 +429,29 @@ func generateMobile() string {
 		return generateMobile()
 	}
 	return fmt.Sprintf("%v", randNum)
+}
+
+func getUserInitPassword() string {
+	if config.Conf != nil && config.Conf.Ldap != nil {
+		if config.Conf.Ldap.UserInitPasswordRandom {
+			return tools.GenerateRandomPassword()
+		}
+		if pwd := strings.TrimSpace(config.Conf.Ldap.UserInitPassword); pwd != "" {
+			return pwd
+		}
+	}
+	return tools.GenerateRandomPassword()
+}
+
+func shouldSendUserCreationNotification(user *model.User) bool {
+	if user == nil || strings.TrimSpace(user.Mail) == "" {
+		return false
+	}
+	if user.Source == "" || user.Source == "platform" {
+		return true
+	}
+	if config.Conf == nil || config.Conf.Ldap == nil {
+		return true
+	}
+	return config.Conf.Ldap.SyncUserSendMail
 }
